@@ -1,7 +1,7 @@
 #-*-coding:utf-8-*-
 import hashlib
 from flask import Flask, Response, request, redirect, render_template
-import time, lmdb, math
+import time, cv2
 
 # 设置和检查cookie
 legal_valid = hashlib.md5(('sunaizhou' + '1314').encode()).hexdigest()
@@ -16,16 +16,15 @@ def check_cookie():
   return this_valid == legal_valid
 
 # 图片响应
-frequency = 10.
+frequency = 20.
 class Camera(object):
   def __init__(self):
-    print('init a new txn')
+    self.cap = cv2.VideoCapture(0)
+    print('init a new camera')
   def get_frame(self):
-    env = lmdb.open('./images', map_size = 1073741824)
-    self.txn = env.begin()
-    key = self.txn.get(key = 'max'.encode())
-    print(key)
-    frame = self.txn.get(key = key)
+    ret, frame = self.cap.read()
+    frame = cv2.imencode('.jpg', frame)[1].tobytes()
+    time.sleep(1 / frequency)
     return frame
 
 # app是Flask的一个实例，一般传递__name__作为输入
