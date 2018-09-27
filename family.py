@@ -37,7 +37,9 @@ def write_image():
         time_stamp = math.floor(next_time_stamp)
         ret, image = cap.read()
         assert ret
-        frame = cv2.imencode('.jpg', image)[1].tobytes()
+        image = cv2.resize(image, (480, 360))
+        image = cv2.imencode('.jpg', image)[1].tobytes()
+        frame = image
 t = threading.Thread(target = write_image)
 t.start()
 
@@ -75,8 +77,8 @@ def secret():
 # 一个用来产生图片的生成器
 def gen():
     while True:
-        yield (b'--frame\nContent-Type: image/jpeg\n\n' + frame + b'\n')
         time.sleep(1. / frequency)
+        yield (b'--frame\nContent-Type: image/jpeg\n\n' + frame + b'\n')
 
 # 根据生成的图片，用来产生对应的地址
 @app.route('/secret_feed')
