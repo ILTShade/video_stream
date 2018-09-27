@@ -1,7 +1,7 @@
 #-*-coding:utf-8-*-
 import hashlib
 from flask import Flask, Response, request, redirect, render_template
-import time, cv2
+import math, time, cv2, threading
 
 # 设置和检查cookie
 legal_valid = hashlib.md5(('sunaizhou' + '1314').encode()).hexdigest()
@@ -16,16 +16,30 @@ def check_cookie():
   return this_valid == legal_valid
 
 # 图片响应
-frequency = 20.
-class Camera(object):
-  def __init__(self):
-    self.cap = cv2.VideoCapture(0)
+frequency = 10.
+time_stamp = 0
+frame = b''
+def write_image():
+    print('start a generate image threading')
+    cap = cv2.VideoCapture(0)
     print('init a new camera')
-  def get_frame(self):
-    ret, frame = self.cap.read()
-    frame = cv2.imencode('.jpg', frame)[1].tobytes()
-    time.sleep(1 / frequency)
-    return frame
+    # time
+    global frame
+    global time_stamp
+    time_stamp = math.floor(time.time() * frequency)
+    while True:
+        next_time_stamp = time.time() * frequency
+        assert next_time_stamp - time_stamp > 0
+        while next_time_stamp - time_stamp < 1:
+            time.sleep((time_stamp + 1 - next_time_stamp) / frequency)
+            next_time_stamp = time.time() * frequency
+            assert next_time_stamp - time_stamp > 0
+        time_stamp = math.floor(next_time_stamp)
+        ret, image = cap.read()
+        assert ret
+        frame = cv2.imencode('.jpg', image)[1].tobytes()
+t = threading.Thread(target = write_image)
+t.start()
 
 # app是Flask的一个实例，一般传递__name__作为输入
 app = Flask(__name__)
@@ -60,10 +74,9 @@ def secret():
 
 # 一个用来产生图片的生成器
 def gen():
-    camera = Camera()
     while True:
-        frame = camera.get_frame()
         yield (b'--frame\nContent-Type: image/jpeg\n\n' + frame + b'\n')
+        time.sleep(1. / frequency)
 
 # 根据生成的图片，用来产生对应的地址
 @app.route('/secret_feed')
